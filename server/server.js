@@ -38,7 +38,7 @@ app.get('/test', (req, res) => {
 const server = createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
     credentials: true
   }
 });
@@ -88,8 +88,8 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 app.use(cors({
-    origin:"http://localhost:5173",
-    credentials:true
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true
 }))
 
 app.use(express.json());
@@ -116,7 +116,7 @@ app.use(passport.session());
 passport.use(new GoogleStrategy({
     clientID:process.env.GOOGLE_CLIENT_ID,
     clientSecret:process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL:'http://localhost:4000/auth/google/callback'
+    callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:4000/auth/google/callback'
 },(accessToken,refreshToken,profile,done)=>{
     console.log(profile);
     return done(null,profile);
@@ -137,11 +137,11 @@ app.get('/auth/google',passport.authenticate('google',{
 
 app.get(
   '/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: 'http://localhost:5173/login' }),
+  passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '/login' || 'http://localhost:5173/login' }),
   googleAuth,
   (req, res) => {
     // login success → redirect to Feed page
-    res.redirect('http://localhost:5173/feed'); // feed route explicitly define karo
+    res.redirect(process.env.FRONTEND_URL + '/feed' || 'http://localhost:5173/feed'); // feed route explicitly define karo
   }
 );
 
