@@ -1,5 +1,5 @@
 // import nodemailer from 'nodemailer';
-// import sendEmail from '../config/nodemailer.js';
+// import sendEmail from '../config/nodeMailer.js';
 
 // //send email for otp for updating password
 
@@ -72,7 +72,7 @@
 
 
 import nodemailer from 'nodemailer';
-import sendEmail from '../config/nodemailer.js';
+import sendEmail from '../config/nodeMailer.js';
 
 import Connection from '../models/Connection.js';
 import dotenv from 'dotenv'

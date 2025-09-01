@@ -1,7 +1,7 @@
 import cron from "node-cron";
 import Message from "../models/Messages.js";
 import User from "../models/User.js";
-import sendEmail from "../config/nodemailer.js";
+import sendEmail from "../config/nodeMailer.js";
 
 // ✅ Schedule job: Roz subah 9 baje chalega (New York Time ke jagah abhi simple local time rakha hai)
 // cron.schedule("0 9 * * *", () => {
