@@ -11,7 +11,7 @@ const upload = multer({
     limits: {
         fileSize: 60 * 1024 * 1024, // 60MB
         fields: 10,
-        files: 1
+        files: 10
     }
 });
 

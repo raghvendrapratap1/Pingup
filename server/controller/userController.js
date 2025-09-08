@@ -204,10 +204,10 @@ export const updateUserData = async(req,res,next)=>{
 const profile = req.files?.profile?.[0];
 const cover = req.files?.cover?.[0];
 
-// Use in-memory buffers from multer for serverless compatibility
 if(profile){
+    const buffer = fs.readFileSync(profile.path);
     const response = await imagekit.upload({
-        file: profile.buffer,
+        file: buffer,
         fileName: profile.originalname
     });
     const url = imagekit.url({
@@ -222,8 +222,9 @@ if(profile){
 }
 
 if(cover){
+    const buffer = fs.readFileSync(cover.path);
     const response = await imagekit.upload({
-        file: cover.buffer,
+        file: buffer,
         fileName: cover.originalname
     });
     const url = imagekit.url({
@@ -234,7 +235,7 @@ if(cover){
             {width:'1280'}
         ]
     });
-    updatedData.cover_photo = url;
+    updatedData.cover_picture = url;
 }
 
 

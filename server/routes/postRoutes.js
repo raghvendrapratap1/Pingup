@@ -5,8 +5,8 @@ import express from 'express';
 
 const postRouter = express.Router();
 
-// Updated to accept both images and videos with flexible field name
-postRouter.post('/add', upload.array('media', 10), auth, addPost);
+// Enforce auth before parsing multipart to reduce unnecessary work
+postRouter.post('/add', auth, upload.array('media', 10), addPost);
 
 postRouter.get('/feed', auth, getFeedPosts);
 

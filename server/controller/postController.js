@@ -24,7 +24,8 @@ export const addPost = async(req,res)=>{
             image_urls = await Promise.all(
                 images.map(async(image, index)=>{
                     try {
-                        const fileBuffer = fs.readFileSync(image.path);
+                        const fileBuffer = image.buffer || (image.path ? fs.readFileSync(image.path) : null);
+                        if(!fileBuffer) throw new Error('Invalid image buffer');
                         const response = await imagekit.upload({
                             file:fileBuffer,
                             fileName:image.originalname,
@@ -47,7 +48,8 @@ export const addPost = async(req,res)=>{
             video_urls = await Promise.all(
                 videos.map(async(video, index)=>{
                     try {
-                        const fileBuffer = fs.readFileSync(video.path);
+                        const fileBuffer = video.buffer || (video.path ? fs.readFileSync(video.path) : null);
+                        if(!fileBuffer) throw new Error('Invalid video buffer');
                         const response = await imagekit.upload({
                             file:fileBuffer,
                             fileName:video.originalname,
