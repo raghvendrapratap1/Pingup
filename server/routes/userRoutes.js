@@ -33,11 +33,11 @@ router.get('/data',auth,getUserData);
 
 router.post(
   '/update',
+  auth,
   upload.fields([
     { name: 'profile', maxCount: 1 },
     { name: 'cover', maxCount: 1 }
   ]),
-  auth,
   updateUserData
 );
 
