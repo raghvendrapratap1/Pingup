@@ -2,11 +2,9 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import generateToken from "../utils/generateToken.js";
 
-
 const login = async (req, res, next) => {
   const { email, password } = req.body;
 
-  // Validate required fields
   if (!email || !password) {
     return res.status(400).json({
       message: 'Email and password are required',
@@ -15,7 +13,6 @@ const login = async (req, res, next) => {
   }
 
   try {
-    // Check database connection status
     const mongoose = await import('mongoose');
     if (mongoose.default.connection.readyState !== 1) {
       return res.status(500).json({
@@ -24,7 +21,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Try to find the user
     const findedUser = await User.findOne({ email: email });
     
     if (!findedUser) {
@@ -34,7 +30,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Check if user has a password (for Google users who might not have passwords)
     if (!findedUser.password) {
       return res.status(400).json({
         message: 'This account was created with Google. Please use Google login.',
@@ -50,7 +45,6 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Check if ACCESS_TOKEN_KEY exists
     if (!process.env.ACCESS_TOKEN_KEY) {
       return res.status(500).json({
         message: 'Server configuration error',
@@ -58,14 +52,14 @@ const login = async (req, res, next) => {
       });
     }
 
-    // Generate token using updated generateToken
     const accessToken = generateToken(findedUser);
-    
-    // Save token in cookie
+
+    // ✅ Cookie fix for cross-origin
     res.cookie('accessToken', accessToken, {
       httpOnly: true,
-      secure: false,
-      sameSite: 'lax'
+      secure: true,       // Vercel requires HTTPS cookies
+      sameSite: 'None',   // cross-origin cookie allowed
+      path: "/"           // available for all routes
     });
 
     res.status(200).json({
@@ -84,4 +78,3 @@ const login = async (req, res, next) => {
 };
 
 export default login;
-

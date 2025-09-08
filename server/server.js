@@ -22,7 +22,7 @@ import storyQueue from './queues/storyQueue.js';
 
 const app = express();
 
-// Test route to check if server is working
+// Test route
 app.get('/test', (req, res) => {
     res.json({ message: 'Server is running!', timestamp: new Date().toISOString() });
 });
@@ -36,7 +36,7 @@ const io = new Server(server, {
   }
 });
 
-// Socket.IO connection handling
+// Socket.IO auth
 io.use((socket, next) => {
   const userId = socket.handshake.auth.userId;
   if (userId) {
@@ -48,121 +48,103 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  // Join user's personal room
   socket.on('join', ({ userId }) => {
     socket.join(`user_${userId}`);
   });
-  
-  // Handle typing events
+
   socket.on('typing', ({ to_user_id }) => {
-    // Emit to the recipient that user is typing
     socket.to(`user_${to_user_id}`).emit('userTyping', {
       from_user_id: socket.userId
     });
   });
-  
+
   socket.on('stopTyping', ({ to_user_id }) => {
-    // Emit to the recipient that user stopped typing
     socket.to(`user_${to_user_id}`).emit('userStopTyping', {
       from_user_id: socket.userId
     });
   }); 
 
-  // Handle disconnection
   socket.on('disconnect', () => {
     // User disconnected
   });
 });
 
-// Make io available to routes
 app.set('io', io);
 
+// ✅ CORS fix
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: process.env.FRONTEND_URL || "https://pingup-front.vercel.app",
     credentials: true
-}))
+}));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
-    secret:"secret",
-    resave:false,
-    saveUninitialized:true
-}))
+    secret: "secret",
+    resave: false,
+    saveUninitialized: true
+}));
 app.use(cookieParser());
 
-// Serve static files from client build directory
+// Static files
 app.use(express.static(path.join(process.cwd(), 'client', 'dist')));
 
-// Handle favicon.ico requests specifically
 app.get('/favicon.ico', (req, res) => {
-    res.status(204).end(); // No content response for favicon
+    res.status(204).end();
 });
 
 app.use(passport.initialize());
 app.use(passport.session());
 
 passport.use(new GoogleStrategy({
-    clientID:process.env.GOOGLE_CLIENT_ID,
-    clientSecret:process.env.GOOGLE_CLIENT_SECRET,
+    clientID: process.env.GOOGLE_CLIENT_ID,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || 'https://pingup-back.vercel.app/auth/google/callback'
-},(accessToken,refreshToken,profile,done)=>{
-    return done(null,profile);
-}))
+}, (accessToken, refreshToken, profile, done) => {
+    return done(null, profile);
+}));
 
-passport.serializeUser((user,done)=>{
-    done(null,user)
-})
+passport.serializeUser((user, done) => {
+    done(null, user);
+});
 
-passport.deserializeUser((user,done)=>{
-    done(null,user)
-})
+passport.deserializeUser((user, done) => {
+    done(null, user);
+});
 
-app.get('/auth/google',passport.authenticate('google',{
-    scope:["email","profile"],
-    prompt:"select_account"
-}))
+app.get('/auth/google', passport.authenticate('google', {
+    scope: ["email", "profile"],
+    prompt: "select_account"
+}));
 
 app.get(
   '/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '/login' || 'https://pingup-front.vercel.app/login' }),
+  passport.authenticate('google', { failureRedirect: (process.env.FRONTEND_URL || 'https://pingup-front.vercel.app') + '/login' }),
   googleAuth,
   (req, res) => {
-    // login success → redirect to Feed page
-    res.redirect(process.env.FRONTEND_URL + '/feed' || 'https://pingup-front.vercel.app/feed'); // feed route explicitly define karo
+    res.redirect((process.env.FRONTEND_URL || 'https://pingup-front.vercel.app') + '/feed');
   }
 );
 
-
-app.use('/api/user',userRoutes)
-app.use('/api/post',postRouter)
-app.use('/api/story',storyRouter)
-app.use('/api/message',messageRouter)
+// Routes
+app.use('/api/user', userRoutes);
+app.use('/api/post', postRouter);
+app.use('/api/story', storyRouter);
+app.use('/api/message', messageRouter);
 await connectDB();
 
+// Gemini API
+app.use('/api/gemini', geminiRouter);
 
-// gemini  api call 
-app.use('/api/gemini',geminiRouter);
-
-// Initialize Bull queue
+// Bull Queue
 try {
-    storyQueue.on('completed', (job) => {
-        // Job completed successfully
-    });
+    storyQueue.on('completed', (job) => {});
+    storyQueue.on('failed', (job, err) => {});
+    storyQueue.on('error', (error) => {});
+} catch (error) {}
 
-    storyQueue.on('failed', (job, err) => {
-        // Job failed
-    });
-
-    storyQueue.on('error', (error) => {
-        // Bull queue error
-    });
-} catch (error) {
-    // Bull queue setup failed
-}
-
-// Error handler should be registered after all routes
+// Error handler
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
@@ -173,14 +155,10 @@ server.listen(PORT, () => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
     await storyQueue.close();
-    server.close(() => {
-        process.exit(0);
-    });
+    server.close(() => process.exit(0));
 });
 
 process.on('SIGINT', async () => {
     await storyQueue.close();
-    server.close(() => {
-        process.exit(0);
-    });
+    server.close(() => process.exit(0));
 });
