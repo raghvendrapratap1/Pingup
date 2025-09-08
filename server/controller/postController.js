@@ -10,61 +10,70 @@ export const addPost = async(req,res)=>{
         const userId = req.userId;
         const {content,post_type} = req.body;
 
-        // Check if files exist and handle undefined case
-        const files = req.files || [];
+        // Allow two modes:
+        // 1) Direct media URLs provided by client (recommended for large files)
+        // 2) Multipart file upload via req.files
         
-        const images = files.filter(file => file.mimetype && file.mimetype.startsWith('image/'));
-        const videos = files.filter(file => file.mimetype && file.mimetype.startsWith('video/'));
-
         let image_urls = [];
         let video_urls = [];
 
-        // Upload images
-        if(images.length > 0){
-            image_urls = await Promise.all(
-                images.map(async(image, index)=>{
-                    try {
-                        const fileBuffer = image.buffer || (image.path ? fs.readFileSync(image.path) : null);
-                        if(!fileBuffer) throw new Error('Invalid image buffer');
-                        const response = await imagekit.upload({
-                            file:fileBuffer,
-                            fileName:image.originalname,
-                            folder:"posts",
-                        })
-                        
-                        // For URL Generation - use direct URL from response
-                        const url = response.url; // Use direct URL from response
+        // Pick URLs if provided in JSON body (array or JSON string)
+        const parseMaybeArray = (val) => {
+            if(!val) return [];
+            if(Array.isArray(val)) return val;
+            try { return JSON.parse(val); } catch { return []; }
+        };
+        const bodyImageUrls = parseMaybeArray(req.body?.image_urls);
+        const bodyVideoUrls = parseMaybeArray(req.body?.video_urls);
 
-                        return url;
-                    } catch (uploadError) {
-                        throw new Error(`Failed to upload image: ${image.originalname}`);
-                    }
-                })
-            )
-        }
+        if(bodyImageUrls.length > 0 || bodyVideoUrls.length > 0){
+            image_urls = bodyImageUrls;
+            video_urls = bodyVideoUrls;
+        } else {
+            // Fallback to handling uploaded files (small payloads)
+            const files = req.files || [];
+            const images = files.filter(file => file.mimetype && file.mimetype.startsWith('image/'));
+            const videos = files.filter(file => file.mimetype && file.mimetype.startsWith('video/'));
 
-        // Upload videos
-        if(videos.length > 0){
-            video_urls = await Promise.all(
-                videos.map(async(video, index)=>{
-                    try {
-                        const fileBuffer = video.buffer || (video.path ? fs.readFileSync(video.path) : null);
-                        if(!fileBuffer) throw new Error('Invalid video buffer');
-                        const response = await imagekit.upload({
-                            file:fileBuffer,
-                            fileName:video.originalname,
-                            folder:"posts/videos",
-                        })
-                        
-                        // For video URL Generation - use direct URL without transformations
-                        const url = response.url; // Use direct URL from response
+            // Upload images
+            if(images.length > 0){
+                image_urls = await Promise.all(
+                    images.map(async(image)=>{
+                        try {
+                            const fileBuffer = image.buffer || (image.path ? fs.readFileSync(image.path) : null);
+                            if(!fileBuffer) throw new Error('Invalid image buffer');
+                            const response = await imagekit.upload({
+                                file:fileBuffer,
+                                fileName:image.originalname,
+                                folder:"posts",
+                            })
+                            return response.url;
+                        } catch (uploadError) {
+                            throw new Error(`Failed to upload image: ${image.originalname}`);
+                        }
+                    })
+                )
+            }
 
-                        return url;
-                    } catch (uploadError) {
-                        throw new Error(`Failed to upload video: ${video.originalname}`);
-                    }
-                })
-            )
+            // Upload videos
+            if(videos.length > 0){
+                video_urls = await Promise.all(
+                    videos.map(async(video)=>{
+                        try {
+                            const fileBuffer = video.buffer || (video.path ? fs.readFileSync(video.path) : null);
+                            if(!fileBuffer) throw new Error('Invalid video buffer');
+                            const response = await imagekit.upload({
+                                file:fileBuffer,
+                                fileName:video.originalname,
+                                folder:"posts/videos",
+                            })
+                            return response.url;
+                        } catch (uploadError) {
+                            throw new Error(`Failed to upload video: ${video.originalname}`);
+                        }
+                    })
+                )
+            }
         }
 
         // Determine post type if not provided
