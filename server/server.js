@@ -126,11 +126,11 @@ app.get('/auth/google',passport.authenticate('google',{
 
 app.get(
   '/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '/login' || 'http://localhost:5173/login' }),
+  passport.authenticate('google', { failureRedirect: process.env.FRONTEND_URL + '/login' || 'https://pingup-front.vercel.app/login' }),
   googleAuth,
   (req, res) => {
     // login success → redirect to Feed page
-    res.redirect(process.env.FRONTEND_URL + '/feed' || 'http://localhost:5173/feed'); // feed route explicitly define karo
+    res.redirect(process.env.FRONTEND_URL + '/feed' || 'https://pingup-front.vercel.app/feed'); // feed route explicitly define karo
   }
 );
 
