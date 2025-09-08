@@ -65,9 +65,7 @@ const StoryModel = ({ setShowModal, fetchStories }) => {
   // Upload media to ImageKit using server-generated auth
   const uploadToImageKit = async (file) => {
     // 1) get auth params from server
-    const authRes = await api.get("/api/imagekit/auth", {
-      headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
-    });
+    const authRes = await api.get("/api/imagekit/auth");
 
     if (!authRes?.data?.token || !authRes?.data?.signature || !authRes?.data?.expire) {
       throw new Error("Failed to get upload auth");

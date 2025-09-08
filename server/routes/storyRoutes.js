@@ -7,7 +7,8 @@ import storyQueue from '../queues/storyQueue.js';
 
 const storyRouter=express.Router();
 
-storyRouter.post('/create',upload.single('media'),auth,addUserStory);
+// Enforce auth before parsing potentially large multipart bodies
+storyRouter.post('/create',auth,upload.single('media'),addUserStory);
 storyRouter.get('/get',auth,getStories);
 storyRouter.post('/like',auth,likeStory);
 storyRouter.delete('/delete/:storyId',auth,deleteStory);

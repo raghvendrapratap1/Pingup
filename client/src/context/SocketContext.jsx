@@ -37,7 +37,7 @@ export const SocketProvider = ({ children }) => {
     // Connect to Socket.IO server with robust options for serverless/proxy envs
     const socket = io(socketUrl, {
       path: '/socket.io',
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'], // avoid polling 400 behind proxies
       withCredentials: true,
       auth: {
         userId: currentUser._id
