@@ -3,9 +3,6 @@ import path from 'path';
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 dotenv.config();
-console.log("Current Working Dir:", process.cwd());
-
-console.log("PUBLIC KEY:", process.env.IMAGEKIT_PUBLIC_KEY); // test
 
 import express from 'express';
 import cors from 'cors';
@@ -15,7 +12,6 @@ import session from 'express-session';
 import passport from 'passport';
 import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import googleAuth from './middleware/googleAuth.js';
-// import getConnection from './utils/getConnections.js';
 import userRoutes from "./routes/userRoutes.js";
 import errorHandler from './middleware/errorHandler.js';
 import postRouter from './routes/postRoutes.js';
@@ -23,9 +19,6 @@ import storyRouter from './routes/storyRoutes.js';
 import messageRouter from './routes/messageRoutes.js';
 import geminiRouter from './routes/geminiRoutes.js';
 import storyQueue from './queues/storyQueue.js';
-
-// console.log("Current dir:", process.cwd());
-// console.log("MongoDB URL:", process.env.MONGODB_URL);
 
 const app = express();
 
@@ -55,12 +48,9 @@ io.use((socket, next) => {
 });
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.userId);
-  
   // Join user's personal room
   socket.on('join', ({ userId }) => {
     socket.join(`user_${userId}`);
-    console.log(`User ${userId} joined their room`);
   });
   
   // Handle typing events
@@ -76,11 +66,11 @@ io.on('connection', (socket) => {
     socket.to(`user_${to_user_id}`).emit('userStopTyping', {
       from_user_id: socket.userId
     });
-  });
-  
+  }); 
+
   // Handle disconnection
   socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.userId);
+    // User disconnected
   });
 });
 
@@ -92,8 +82,8 @@ app.use(cors({
     credentials: true
 }))
 
-app.use(express.json());
-app.use(express.urlencoded({extended:true}));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 app.use(session({
     secret:"secret",
@@ -118,7 +108,6 @@ passport.use(new GoogleStrategy({
     clientSecret:process.env.GOOGLE_CLIENT_SECRET,
     callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:4000/auth/google/callback'
 },(accessToken,refreshToken,profile,done)=>{
-    console.log(profile);
     return done(null,profile);
 }))
 
@@ -146,57 +135,52 @@ app.get(
 );
 
 
-app.use(errorHandler);
-
-
 app.use('/api/user',userRoutes)
 app.use('/api/post',postRouter)
 app.use('/api/story',storyRouter)
 app.use('/api/message',messageRouter)
-// get Connection();
 await connectDB();
 
 
 // gemini  api call 
 app.use('/api/gemini',geminiRouter);
 
-// app.use('/api/inngest',serve({ client: inngest, functions }))
-
 // Initialize Bull queue
-storyQueue.on('completed', (job) => {
-    console.log(`✅ Job ${job.id} completed successfully`);
-});
+try {
+    storyQueue.on('completed', (job) => {
+        // Job completed successfully
+    });
 
-storyQueue.on('failed', (job, err) => {
-    console.error(`❌ Job ${job.id} failed:`, err.message);
-});
+    storyQueue.on('failed', (job, err) => {
+        // Job failed
+    });
 
-storyQueue.on('error', (error) => {
-    console.error('❌ Bull queue error:', error);
-});
+    storyQueue.on('error', (error) => {
+        // Bull queue error
+    });
+} catch (error) {
+    // Bull queue setup failed
+}
 
-console.log('🚀 Bull queue initialized for story deletion');
+// Error handler should be registered after all routes
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, () => {
-    console.log(`server is running on PORT ${PORT}`);
+    console.log(`Server is running on PORT ${PORT}`);
 });
 
 // Graceful shutdown
 process.on('SIGTERM', async () => {
-    console.log('🔄 SIGTERM received, shutting down gracefully...');
     await storyQueue.close();
     server.close(() => {
-        console.log('✅ Server closed');
         process.exit(0);
     });
 });
 
 process.on('SIGINT', async () => {
-    console.log('🔄 SIGINT received, shutting down gracefully...');
     await storyQueue.close();
     server.close(() => {
-        console.log('✅ Server closed');
         process.exit(0);
     });
 });
