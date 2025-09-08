@@ -86,8 +86,10 @@ app.use(cors({
         return isAllowed ? callback(null, true) : callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-    allowedHeaders: ['Content-Type','Authorization'],
-    credentials: true
+    allowedHeaders: ['Content-Type','Authorization','Accept','X-Requested-With'],
+    exposedHeaders: ['Content-Length','Content-Type'],
+    credentials: true,
+    maxAge: 86400
 }));
 
 app.use(express.json({ limit: '50mb' }));
