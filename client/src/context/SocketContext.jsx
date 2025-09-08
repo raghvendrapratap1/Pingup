@@ -31,8 +31,14 @@ export const SocketProvider = ({ children }) => {
 
     console.log('Connecting to Socket.IO for user:', currentUser._id);
     
-    // Connect to Socket.IO server
-    const socket = io(import.meta.env.VITE_BASEURL, {
+    // Prefer a dedicated SOCKET URL for deployments behind proxies (e.g., Vercel)
+    const socketUrl = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_BASEURL;
+
+    // Connect to Socket.IO server with robust options for serverless/proxy envs
+    const socket = io(socketUrl, {
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
       auth: {
         userId: currentUser._id
       }

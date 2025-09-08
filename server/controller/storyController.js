@@ -10,15 +10,22 @@ export const addUserStory=async(req,res)=>{
         const userId = req.userId;
         const {content,media_type,background_color} = req.body;
         const media = req.file;
-        let media_url ='';
+        let media_url = '';
 
-        //UPLOAD MEDIA TO IMAGEKIT
-        if(media_type == 'image'  || media_type == 'video'){
-            const fileBuffer = fs.readFileSync(media.path)
+        // Validate input for text stories
+        if ((media_type === 'text' || !media_type) && !(content && content.trim())) {
+            return res.status(400).json({ success:false, message:'Please provide content for text story' });
+        }
+
+        //UPLOAD MEDIA TO IMAGEKIT (use memory buffer in serverless env)
+        if(media_type === 'image'  || media_type === 'video'){
+            if (!media || !media.buffer) {
+                return res.status(400).json({ success:false, message:'Media file missing' });
+            }
             const response = await imagekit.upload({
-                file:fileBuffer,
-                fileName:media.originalname,
-            })
+                file: media.buffer, // Buffer from multer memoryStorage
+                fileName: media.originalname,
+            });
             media_url = response.url;
         }
         const story = await Story.create({
@@ -38,7 +45,8 @@ export const addUserStory=async(req,res)=>{
 
         res.json({success:true,message:'Story Added'});
     }catch(error){
-        res.json({success:false,message:error.message})
+        console.error('Add story error:', error);
+        res.status(500).json({success:false,message:error.message || 'Failed to add story'})
     }
 }
 
