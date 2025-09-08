@@ -205,37 +205,23 @@ const profile = req.files?.profile?.[0];
 const cover = req.files?.cover?.[0];
 
 if(profile){
-    const buffer = fs.readFileSync(profile.path);
+    const fileBuffer = profile.buffer || (profile.path ? fs.readFileSync(profile.path) : null);
+    if(!fileBuffer) throw new Error('Invalid profile image buffer');
     const response = await imagekit.upload({
-        file: buffer,
+        file: fileBuffer,
         fileName: profile.originalname
     });
-    const url = imagekit.url({
-        path: response.filePath,
-        transformation: [
-            {quality:'auto'},
-            {format:'webp'},
-            {width:'512'}
-        ]
-    });
-    updatedData.profile_picture = url;
+    updatedData.profile_picture = response.url;
 }
 
 if(cover){
-    const buffer = fs.readFileSync(cover.path);
+    const fileBuffer = cover.buffer || (cover.path ? fs.readFileSync(cover.path) : null);
+    if(!fileBuffer) throw new Error('Invalid cover image buffer');
     const response = await imagekit.upload({
-        file: buffer,
+        file: fileBuffer,
         fileName: cover.originalname
     });
-    const url = imagekit.url({
-        path: response.filePath,
-        transformation: [
-            {quality:'auto'},
-            {format:'webp'},
-            {width:'1280'}
-        ]
-    });
-    updatedData.cover_picture = url;
+    updatedData.cover_picture = response.url;
 }
 
 
