@@ -14,6 +14,30 @@ const CreatePost = () => {
 
   const user = useSelector((state) => state.user.value);
 
+  // Direct upload to ImageKit using server-auth (avoids large payloads to backend)
+  const uploadToImageKit = async (file) => {
+    const authRes = await api.get('/api/imagekit/auth', {
+      headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` },
+    });
+    if (!authRes?.data?.token || !authRes?.data?.signature || !authRes?.data?.expire) {
+      throw new Error('Failed to get ImageKit auth');
+    }
+    const form = new FormData();
+    form.append('file', file);
+    form.append('fileName', file.name);
+    form.append('token', authRes.data.token);
+    form.append('signature', authRes.data.signature);
+    form.append('expire', authRes.data.expire);
+    const uploadEndpoint = `${import.meta.env.VITE_IMAGEKIT_UPLOAD_URL || 'https://upload.imagekit.io/api/v1/files/upload'}`;
+    const resp = await fetch(uploadEndpoint, { method: 'POST', body: form });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`ImageKit upload failed: ${txt}`);
+    }
+    const json = await resp.json();
+    return json?.url;
+  };
+
   const handleSubmit = async () => {
     if (!images.length && !videos.length && !content) {
       return toast.error('Please add at least one image, video or text');
@@ -37,28 +61,43 @@ const CreatePost = () => {
     }
 
     try {
-      const formData = new FormData();
-      formData.append('content', content);
-      formData.append('post_type', postType);
-      
-      // Add images
-      images.forEach((image) => {
-        formData.append('media', image);
-      });
-      
-      // Add videos
-      videos.forEach((video) => {
-        formData.append('media', video);
-      });
+      // 1) Upload media to ImageKit first
+      const imageUrls = [];
+      const videoUrls = [];
 
-      // simple API call without Clerk
-      const { data } = await api.post('/api/post/add', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          // If your backend expects token from Redux or localStorage:
-          Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+      for (const img of images) {
+        const url = await toast.promise(uploadToImageKit(img), {
+          loading: 'Uploading image...',
+          success: 'Image uploaded',
+          error: 'Failed to upload image',
+        });
+        imageUrls.push(url);
+      }
+
+      for (const vid of videos) {
+        const url = await toast.promise(uploadToImageKit(vid), {
+          loading: 'Uploading video...',
+          success: 'Video uploaded',
+          error: 'Failed to upload video',
+        });
+        videoUrls.push(url);
+      }
+
+      // 2) Create post with URLs only (small JSON payload)
+      const { data } = await api.post(
+        '/api/post/add',
+        {
+          content,
+          post_type: postType,
+          image_urls: imageUrls,
+          video_urls: videoUrls,
         },
-      });
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token') || ''}`,
+          },
+        }
+      );
 
       if (data.success) {
         toast.success('Post published successfully!');
