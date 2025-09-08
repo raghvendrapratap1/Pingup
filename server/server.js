@@ -73,8 +73,20 @@ io.on('connection', (socket) => {
 app.set('io', io);
 
 // ✅ CORS fix
+const allowedOrigins = [
+    process.env.FRONTEND_URL || 'https://pingup-front.vercel.app',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || "https://pingup-front.vercel.app",
+    origin: function(origin, callback) {
+        if (!origin) return callback(null, true);
+        const isAllowed = allowedOrigins.includes(origin) || /\.vercel\.app$/.test(new URL(origin).hostname);
+        return isAllowed ? callback(null, true) : callback(new Error('Not allowed by CORS'));
+    },
+    methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+    allowedHeaders: ['Content-Type','Authorization'],
     credentials: true
 }));
 
