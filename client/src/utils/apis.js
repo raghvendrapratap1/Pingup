@@ -1,7 +1,7 @@
 
 
 const apis=()=>{
-    const local = "http://localhost:4000/api";
+    const local = "https://pingup-back.vercel.app/api";
 
     const list={
         registerUser: `${local}/user/register`,
