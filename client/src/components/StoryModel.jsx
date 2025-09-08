@@ -62,6 +62,38 @@ const StoryModel = ({ setShowModal, fetchStories }) => {
     }
   };
 
+  // Upload media to ImageKit using server-generated auth
+  const uploadToImageKit = async (file) => {
+    // 1) get auth params from server
+    const authRes = await api.get("/api/imagekit/auth", {
+      headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+    });
+
+    if (!authRes?.data?.token || !authRes?.data?.signature || !authRes?.data?.expire) {
+      throw new Error("Failed to get upload auth");
+    }
+
+    // 2) post to ImageKit upload endpoint
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("fileName", file.name);
+    formData.append("token", authRes.data.token);
+    formData.append("signature", authRes.data.signature);
+    formData.append("expire", authRes.data.expire);
+
+    const uploadEndpoint = `${import.meta.env.VITE_IMAGEKIT_UPLOAD_URL || "https://upload.imagekit.io/api/v1/files/upload"}`;
+    const resp = await fetch(uploadEndpoint, {
+      method: "POST",
+      body: formData,
+    });
+    if (!resp.ok) {
+      const txt = await resp.text();
+      throw new Error(`ImageKit upload failed: ${txt}`);
+    }
+    const json = await resp.json();
+    return json?.url;
+  };
+
   // ✅ Create Story
   const handleCreateStory = async () => {
     try {
@@ -76,13 +108,23 @@ const StoryModel = ({ setShowModal, fetchStories }) => {
         throw new Error("Please write something for text story.");
       }
 
+      setLoading(true);
+
+      let media_url;
+      // For images/videos, upload to ImageKit first to avoid large payloads to Vercel
+      if (media_type === "image" || media_type === "video") {
+        media_url = await toast.promise(uploadToImageKit(media), {
+          loading: "Uploading media...",
+          success: "Media uploaded",
+          error: "Failed to upload media",
+        });
+      }
+
       const formData = new FormData();
       formData.append("content", text);
       formData.append("media_type", media_type);
-      if (media) formData.append("media", media);
       formData.append("background_color", background);
-
-      setLoading(true);
+      if (media_url) formData.append("media_url", media_url);
 
       // ✅ Toast popup for Uploading...
       await toast.promise(
@@ -90,7 +132,7 @@ const StoryModel = ({ setShowModal, fetchStories }) => {
           headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
         }),
         {
-          loading: "Uploading story...",
+          loading: "Creating story...",
           success: "Story uploaded successfully ✅",
           error: "Failed to upload story ❌",
         }

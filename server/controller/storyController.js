@@ -8,7 +8,7 @@ import storyQueue from '../queues/storyQueue.js';
 export const addUserStory=async(req,res)=>{
     try{
         const userId = req.userId;
-        const {content,media_type,background_color} = req.body;
+        const {content,media_type,background_color, media_url: incomingMediaUrl} = req.body;
         const media = req.file;
         let media_url = '';
 
@@ -17,8 +17,11 @@ export const addUserStory=async(req,res)=>{
             return res.status(400).json({ success:false, message:'Please provide content for text story' });
         }
 
-        //UPLOAD MEDIA TO IMAGEKIT (use memory buffer in serverless env)
-        if(media_type === 'image'  || media_type === 'video'){
+        // If client already uploaded and provided URL, trust it
+        if ((media_type === 'image' || media_type === 'video') && incomingMediaUrl) {
+            media_url = incomingMediaUrl;
+        } else if(media_type === 'image'  || media_type === 'video'){
+            //UPLOAD MEDIA TO IMAGEKIT (use memory buffer in serverless env)
             if (!media || !media.buffer) {
                 return res.status(400).json({ success:false, message:'Media file missing' });
             }

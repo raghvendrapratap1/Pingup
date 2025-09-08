@@ -19,6 +19,7 @@ import storyRouter from './routes/storyRoutes.js';
 import messageRouter from './routes/messageRoutes.js';
 import geminiRouter from './routes/geminiRoutes.js';
 import storyQueue from './queues/storyQueue.js';
+import imagekitRouter from './routes/imagekitRoutes.js';
 
 const app = express();
 
@@ -132,6 +133,7 @@ app.use('/api/user', userRoutes);
 app.use('/api/post', postRouter);
 app.use('/api/story', storyRouter);
 app.use('/api/message', messageRouter);
+app.use('/api/imagekit', imagekitRouter);
 await connectDB();
 
 // Gemini API
