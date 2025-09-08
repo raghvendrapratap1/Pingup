@@ -18,7 +18,9 @@ const StoriesBar = () => {
 
     const fetchStories=async()=>{
         try{
-            const {data} = await api.get('api/story/get')
+            const {data} = await api.get('/api/story/get', {
+                headers: { Authorization: `Bearer ${localStorage.getItem('token') || ''}` }
+            })
             if(data.success){
                 setStories(data.stories);
             }else{
