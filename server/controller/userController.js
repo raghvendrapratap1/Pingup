@@ -102,9 +102,9 @@ export const deleteAccount = async(req,res,next)=>{
             }
         }
 
-        if (user.cover_picture) {
+        if (user.cover_photo) {
             try {
-                const urlParts = user.cover_picture.split('/');
+                const urlParts = user.cover_photo.split('/');
                 const fileName = urlParts[urlParts.length - 1];
                 await imagekit.deleteFile(fileName);
             } catch (mediaError) {
@@ -221,7 +221,7 @@ if(cover){
         file: fileBuffer,
         fileName: cover.originalname
     });
-    updatedData.cover_picture = response.url;
+    updatedData.cover_photo = response.url;
 }
 
 
